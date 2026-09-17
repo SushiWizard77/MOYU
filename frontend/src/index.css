@@ -1,0 +1,473 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eef4ff;
+  --color-brand-100: #dce7ff;
+  --color-brand-200: #b9cfff;
+  --color-brand-300: #8aabff;
+  --color-brand-400: #5e85ff;
+  --color-brand-500: #2f6bff;
+  --color-brand-600: #1d4fd7;
+  --color-brand-700: #163fae;
+  --color-brand-800: #0a1f44;
+  --color-brand-900: #061633;
+  --color-brand-950: #030b1e;
+
+  --color-lavender-50: #f7faff;
+  --color-lavender-100: #eff4ff;
+  --color-lavender-200: #d7e3ff;
+  --color-lavender-300: #afc6f5;
+  --color-lavender-400: #7e9bdd;
+  --color-lavender-500: #5b7ac0;
+
+  --color-starlight: #fff7d6;
+  --color-nebula: #4d7cfe;
+
+  --font-display: "Sora", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Theme-aware base styles */
+:root[data-theme="dark"] {
+  --bg-primary: #030b1e;
+  --bg-secondary: #061633;
+  --bg-tertiary: #0a1f44;
+  --text-primary: #ffffff;
+  --text-secondary: #d7e3ff;
+  --text-muted: #7e9bdd;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --card-bg: rgba(255, 255, 255, 0.03);
+  --card-border: rgba(255, 255, 255, 0.1);
+  --scrollbar-track: #030b1e;
+  --scrollbar-thumb: linear-gradient(180deg, #2f6bff, #0a1f44);
+}
+
+:root[data-theme="light"] {
+  --bg-primary: #f7faff;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #eff4ff;
+  --text-primary: #0a1f44;
+  --text-secondary: #163fae;
+  --text-muted: #5b7ac0;
+  --border-color: rgba(13, 32, 74, 0.1);
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --card-border: rgba(138, 171, 255, 0.2);
+  --scrollbar-track: #f7faff;
+  --scrollbar-thumb: linear-gradient(180deg, #2f6bff, #5e85ff);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: #2f6bff;
+  color: #ffffff;
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+}
+
+/* ---------- cinematic helpers ---------- */
+@keyframes moyu-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-14px); }
+}
+@keyframes moyu-float-slow {
+  0%, 100% { transform: translateY(0px) rotate(-1deg); }
+  50% { transform: translateY(-22px) rotate(1deg); }
+}
+@keyframes moyu-glow-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+@keyframes moyu-shine {
+  0% { transform: translateX(-120%) skewX(-18deg); }
+  100% { transform: translateX(240%) skewX(-18deg); }
+}
+@keyframes moyu-rise {
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes moyu-orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-moyu-float { animation: moyu-float 6s ease-in-out infinite; }
+.animate-moyu-float-slow { animation: moyu-float-slow 9s ease-in-out infinite; }
+
+.mission-star-cluster { position: absolute; inset: 0; overflow: hidden; pointer-events: none; border-radius: inherit; }
+.mission-star-cluster svg { width: 100%; height: 100%; }
+
+.mission-orbit-ring { transform: rotate(-90deg); }
+
+.mission-comet { animation: mission-comet 3.4s linear infinite; }
+@keyframes mission-comet { 0% { transform: translate(-60px, 0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(calc(100vw + 120px), -120px); opacity: 0; } }
+
+.mission-avatar-halo { animation: mission-avatar-halo 3.2s ease-in-out infinite alternate; }
+@keyframes mission-avatar-halo { 0% { box-shadow: 0 0 0 0 rgba(47,107,255,0.25); } 100% { box-shadow: 0 0 22px 6px rgba(47,107,255,0.25); } }
+
+.mission-completion-spark { animation: mission-completion-spark 0.9s cubic-bezier(0.22,1,0.36,1) both; }
+@keyframes mission-completion-spark { 0% { opacity: 0; transform: translate(-50%,-50%) scale(0.2); } 40% { opacity: 1; transform: translate(-50%,-50%) scale(1.15); } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1.6) translateY(-22px); } }
+
+.mission-card-launch { animation: mission-card-launch 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+@keyframes mission-card-launch { 0% { transform: scale(1); opacity: 1; } 40% { transform: scale(1.02); } 100% { transform: scale(1); opacity: 1; } }
+
+.mission-dock-enter { animation: mission-dock-enter 0.55s cubic-bezier(0.22,1,0.36,1) both; }
+@keyframes mission-dock-enter { 0% { opacity: 0; transform: translateY(14px); } 100% { opacity: 1; transform: translateY(0); } }
+.mission-dock-exit { animation: mission-dock-exit 0.28s ease-in both; }
+@keyframes mission-dock-exit { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.96); } }
+
+.mission-hover-trail { transition: transform 0.25s ease; }
+.mission-hover-trail:hover .mission-hover-stars { opacity: 0.8; }
+.mission-hover-stars { opacity: 0; transition: opacity 0.3s ease; }
+
+.mission-run-pulse { animation: mission-run-pulse 1.1s ease-in-out infinite; }
+@keyframes mission-run-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+
+.mission-answer-reveal { animation: mission-answer-reveal 0.5s ease both; }
+@keyframes mission-answer-reveal { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: translateY(0); } }
+.mission-answer-reveal-border { box-shadow: inset 0 0 0 2px rgba(171,202,255,0.25); }
+
+.mission-nav-active { box-shadow: 0 0 0 1px rgba(47,107,255,0.6), 0 0 16px rgba(47,107,255,0.25); }animate-moyu-float-slow { animation: moyu-float-slow 9s ease-in-out infinite; }
+.animate-moyu-rise { animation: moyu-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-moyu-rise-1 { animation: moyu-rise 0.9s 0.08s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-moyu-rise-2 { animation: moyu-rise 0.9s 0.16s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-moyu-rise-3 { animation: moyu-rise 0.9s 0.24s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+.cosmic-grid {
+  background-image:
+    linear-gradient(rgba(138, 171, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(138, 171, 255, 0.07) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 30%, black 30%, transparent 75%);
+}
+
+.glass-navy {
+  background: linear-gradient(160deg, rgba(13, 32, 74, 0.86), rgba(6, 22, 51, 0.92));
+  backdrop-filter: blur(18px);
+}
+
+/* ---------- page transitions ---------- */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(18px) scale(0.995); filter: blur(3px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+.page-enter {
+  animation: page-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-enter { animation: none; }
+}
+
+.shine-button {
+  position: relative;
+  overflow: hidden;
+}
+.shine-button::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  animation: moyu-shine 3.2s ease-in-out infinite;
+}
+
+/* ---------- smooth page transitions ---------- */
+@keyframes moyu-page-enter {
+  from { opacity: 0; transform: translateY(16px) scale(0.995); filter: blur(4px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+.page-enter {
+  animation: moyu-page-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: opacity, transform;
+}
+.page-enter > * {
+  animation: moyu-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.06s;
+}
+.page-enter > *:nth-child(2) { animation-delay: 0.12s; }
+.page-enter > *:nth-child(3) { animation-delay: 0.18s; }
+.page-enter > *:nth-child(4) { animation-delay: 0.24s; }
+.page-enter > *:nth-child(5) { animation-delay: 0.3s; }
+.page-enter > *:nth-child(n+6) { animation-delay: 0.36s; }
+@media (prefers-reduced-motion: reduce) {
+  .page-enter, .page-enter > * { animation: none; }
+}
+
+
+
+/* =====================================================================
+   MOYU space accents â€” quiet, premium, NOT a full overhaul.
+   Used only on progress rings, task completion, recommended cards,
+   avatar halo, active-nav glow, level dock, and feature CTAs.
+   ===================================================================== */
+
+/* ---------- orbital ring SVG fill animations ---------- */
+@keyframes orbit-ring-fill {
+  from {
+    stroke-dashoffset: 440;
+  }
+}
+.orbit-ring-fill {
+  stroke-dasharray: 440;
+  animation: orbit-ring-fill linear forwards;
+  transform-origin: center;
+}
+
+/* ---------- micro star cluster (background dots) ---------- */
+@keyframes star-cluster-drift {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-3px) scale(1.04);
+  }
+}
+.star-cluster {
+  animation: star-cluster-drift 6s ease-in-out infinite;
+}
+
+/* ---------- completion spark burst ---------- */
+@keyframes spark-fly {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--spark-x, 10px), var(--spark-y, -18px))
+      scale(0.2);
+  }
+}
+.spark-particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: spark-fly 0.8s ease-out forwards;
+}
+
+/* ---------- card launch / cross ---------- */
+@keyframes mission-launch {
+  0% {
+    transform: scale(1);
+  }
+  30% { transform: scale(1.03); }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+.mission-launch {
+  animation: mission-launch 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ---------- star trail on hover ---------- */
+@keyframes trail-fade {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+
+/* ---------- subtle comet streak ---------- */
+@keyframes comet-tail {
+  from {
+    transform: translateX(0) skewX(20deg);
+    opacity: 0;
+  }
+  20%, 80% {
+    opacity: 1;
+  }
+  to {
+    transform: translateX(120px) skewX(20deg);
+    opacity: 0;
+  }
+}
+.avatar-halo {
+  box-shadow: 0 0 0 0 rgba(47, 107, 255, 0.5);
+  animation: avatar-halo-pulse 2.4s ease-in-out infinite;
+}
+@keyframes avatar-halo-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(47, 107, 255, 0); }
+  50% { box-shadow: 0 0 0 6px rgba(47, 107, 255, 0.18); }
+}
+
+/* ---------- active nav glow ---------- */
+@keyframes active-glow {
+  from {
+    background-position: 0% center;
+  }
+  to {
+    background-position: 200% center;
+  }
+}
+.nav-active-glow {
+  background-size: 200% auto;
+  animation: active-glow 3.2s linear infinite;
+}
+
+/* ---------- feature CTA pulse ring ---------- */
+@keyframes cta-pulse-ring {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(47, 107, 255, 0);
+  }
+}
+.cta-pulse-ring {
+  animation: cta-pulse-ring 2s ease-out infinite;
+}
+
+/* ---------- level dock transition ---------- */
+@keyframes level-dock {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+.level-dock {
+  animation: level-dock 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.level-dock > *:nth-child(1) { animation: moyu-rise 0.7s 0.04s cubic-bezier(0.22,1,0.36,1) both; }
+.level-dock > *:nth-child(2) { animation: moyu-rise 0.7s 0.09s cubic-bezier(0.22,1,0.36,1) both; }
+.level-dock > *:nth-child(3) { animation: moyu-rise 0.7s 0.14s cubic-bezier(0.22,1,0.36,1) both; }
+.level-dock > *:nth-child(4) { animation: moyu-rise 0.7s 0.19s cubic-bezier(0.22,1,0.36,1) both; }
+.level-dock > *:nth-child(5) { animation: moyu-rise 0.7s 0.24s cubic-bezier(0.22,1,0.36,1) both; }
+.level-dock > *:nth-child(n+6) { animation: moyu-rise 0.7s 0.29s cubic-bezier(0.22,1,0.36,1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .level-dock, .level-dock > * { animation: none; }
+}
+
+/* ---------- run success / reveal pulse ---------- */
+@keyframes run-reveal-pulse {
+  from { box-shadow: 0 0 0 0 rgba(138, 171, 255, 0.6); }
+  to { box-shadow: 0 0 0 14px rgba(138, 171, 255, 0); }
+}
+.run-reveal-pulse {
+  animation: run-reveal-pulse 0.7s ease-out forwards;
+}
+
+/* ---------- native select/option visibility fix ----------
+   Native <option> dropdowns ignore Tailwind text colors in some browsers
+   (the popup renders white-on-white). Force readable option colors. */
+select option {
+  background-color: #0a1f44;
+  color: #ffffff;
+}
+:root[data-theme="light"] select option {
+  background-color: #ffffff;
+  color: #0a1f44;
+}
+
+/* ---------- light-theme overrides for hard-coded dark utilities ----------
+   Dark theme stays exactly as-is. Light theme remaps the legacy
+   dark-only utility classes to light surfaces so the whole page turns light. */
+:root[data-theme="light"] .app-shell {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+:root[data-theme="light"] .app-shell-glow {
+  background: radial-gradient(ellipse 70% 45% at 50% 0%, rgba(47, 107, 255, 0.12), transparent 65%);
+}
+:root[data-theme="light"] .app-shell-stars {
+  opacity: 0.12;
+}
+:root[data-theme="light"] .app-chrome {
+  background-color: rgba(255, 255, 255, 0.92);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+:root[data-theme="light"] .app-chrome .text-white,
+:root[data-theme="light"] .app-chrome.text-white {
+  color: var(--text-primary);
+}
+:root[data-theme="light"] .app-sidebar-link {
+  color: var(--text-muted);
+}
+:root[data-theme="light"] .app-sidebar-link:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+:root[data-theme="light"] .app-sidebar-link-active {
+  background-color: rgba(47, 107, 255, 0.12);
+  color: var(--text-primary);
+}
+:root[data-theme="light"] .lab-card {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-primary);
+}
+:root[data-theme="light"] .lab-muted {
+  color: var(--text-muted);
+}
+:root[data-theme="light"] .lab-strong {
+  color: var(--text-primary);
+}
+:root[data-theme="light"] .lab-subtle-bg {
+  background-color: var(--bg-tertiary);
+  border-color: var(--card-border);
+}
+:root[data-theme="light"] .lab-code {
+  background-color: #0a1f44;
+  border-color: rgba(10, 31, 68, 0.2);
+}
+:root[data-theme="light"] .lab-code code,
+:root[data-theme="light"] .lab-code span,
+:root[data-theme="light"] .lab-code p {
+  color: #d7e3ff;
+}
+
+/* ---------- reduced motion safe ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .star-cluster,
+  .avatar-halo,
+  .nav-active-glow,
+  .cta-pulse-ring,
+  .run-reveal-pulse {
+    animation: none;
+  }
+}
+
