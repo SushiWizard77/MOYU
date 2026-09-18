@@ -19,6 +19,7 @@ const resourceRoutes = require("./routes/resourceRoutes");
 const resumeRoutes = require("./routes/resumeRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const codingRoutes = require("./routes/codingRoutes");
+const codingTrackRoutes = require("./routes/codingTrackRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 
@@ -62,12 +63,22 @@ app.use("/api/v1/resources", resourceRoutes);
 app.use("/api/v1/resume", resumeRoutes);
 app.use("/api/v1/projects", projectRoutes);
 app.use("/api/v1/coding", codingRoutes);
+app.use("/api/v1/coding-track", codingTrackRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/admin", adminRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`🚀 MOYU Backend running on http://localhost:${PORT}`);
+// Connect on cold start (local + Vercel). Cached via config/db.js.
+connectDB().catch(() => {
+  // Error already logged in connectDB; keep process alive on Vercel.
 });
+
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 MOYU Backend running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;

@@ -188,6 +188,10 @@ const getDashboard = async (req, res) => {
     }
 
     const [dailyQuestions, dailyTasks] = await Promise.all([pickDailyQuestions(userId), pickLearningTasks(userId)]);
+    // Coding progress (streak / Easy / Medium / Hard / today's challenge) is
+    // owned by the /api/v1/coding-track module, which reads CodingCompletion +
+    // CodingProfile. The dashboard deliberately does not recompute it here so
+    // there is exactly one source of truth for coding stats.
     dailyTasks.learnedTopics.forEach((task) => {
       task.questions.forEach((q) => {
         q.attempted = dailyTasks.attemptMap[String(q._id)] !== undefined;

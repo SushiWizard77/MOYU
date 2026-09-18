@@ -20,10 +20,12 @@ import ErrorState from "../components/ui/ErrorState";
 import StatCard from "../components/ui/StatCard";
 import ProgressBar from "../components/ui/ProgressBar";
 import Badge from "../components/ui/Badge";
+import CodingProgressCard from "../components/CodingProgressCard";
 import { LogoMark } from "../components/Logo";
 import { useAuth } from "../hooks/useAuth";
 import { dashboardService } from "../services/dashboard.service";
 import { practiceService } from "../services/practice.service";
+import { codingTrackService } from "../services/codingTrack.service";
 
 const CATEGORY_ICONS = {
   coding: Code2,
@@ -37,6 +39,24 @@ function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [trackStats, setTrackStats] = useState(null);
+  const [trackDaily, setTrackDaily] = useState(null);
+  const [trackGithub, setTrackGithub] = useState(null);
+
+  const loadTrack = () => {
+    codingTrackService
+      .getStats()
+      .then((res) => res.success && setTrackStats(res.data))
+      .catch(() => {});
+    codingTrackService
+      .getDaily()
+      .then((res) => res.success && setTrackDaily(res.data))
+      .catch(() => setTrackDaily(null));
+    codingTrackService
+      .githubStatus()
+      .then((res) => res.success && setTrackGithub(res.data))
+      .catch(() => {});
+  };
 
   const loadDashboard = () => {
     setLoading(true);
@@ -53,6 +73,7 @@ function Dashboard() {
   useEffect(() => {
     setTimeout(() => {
       loadDashboard();
+      loadTrack();
     }, 0);
   }, []);
 
@@ -158,7 +179,7 @@ function Dashboard() {
         <section className="mt-8">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="flex items-center gap-2 font-bold text-var(--text-primary)"><Sparkles size={18} className="text-brand-300" /> Today's Practice</h2>
+              <h2 className="flex items-center gap-2 font-bold text-var(--text-primary)"><Sparkles size={18} className="text-brand-300" /> Today&apos;s Practice</h2>
               <p className="mt-1 text-xs text-var(--text-muted)">Coding, aptitude & communication questions picked for you today. Solve them right here.</p>
             </div>
             <Link to="/practice" className="shrink-0 text-xs font-semibold text-brand-300 hover:text-brand-200">
@@ -167,6 +188,17 @@ function Dashboard() {
           </div>
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             {data.dailyQuestions.map((q) => <DailyQuestionCard key={q._id} question={q} />)}
+          </div>
+          <div className="mt-4">
+            <CodingProgressCard
+              stats={trackStats}
+              daily={trackDaily}
+              github={trackGithub}
+              onChanged={() => {
+                loadTrack();
+                loadDashboard();
+              }}
+            />
           </div>
         </section>
       )}

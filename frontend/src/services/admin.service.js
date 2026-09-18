@@ -17,5 +17,11 @@ export const adminService = {
   updatePracticeQuestion: (id, payload) => api.patch(`/admin/practice-questions/${id}`, payload).then((res) => res.data),
   deletePracticeQuestion: (id) => api.delete(`/admin/practice-questions/${id}`).then((res) => res.data),
 
+  listCodingChallenges: () => api.get("/admin/coding-challenges").then((res) => res.data),
+  createCodingChallenge: (payload) => api.post("/admin/coding-challenges", payload).then((res) => res.data),
+  updateCodingChallenge: (id, payload) => api.patch(`/admin/coding-challenges/${id}`, payload).then((res) => res.data),
+  deleteCodingChallenge: (id) => api.delete(`/admin/coding-challenges/${id}`).then((res) => res.data),
+  getStudentCoding: (id) => api.get(`/admin/students/${id}/coding`).then((res) => res.data),
+
   broadcastNotification: (payload) => api.post("/admin/notifications/broadcast", payload).then((res) => res.data),
 };

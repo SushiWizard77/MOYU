@@ -1,0 +1,774 @@
+warning: in the working copy of 'backend/controllers/authController.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/controllers/dashboardController.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/models/Activity.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/models/User.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/package.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/routes/adminRoutes.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/server.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/index.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/App.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/layouts/AdminLayout.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/Dashboard.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/Practice.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/services/admin.service.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/services/api.js', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/backend/config/db.js b/backend/config/db.js[m
+[1mindex ec00dbc..64858fc 100644[m
+[1m--- a/backend/config/db.js[m
+[1m+++ b/backend/config/db.js[m
+[36m@@ -1,14 +1,26 @@[m
+ const mongoose = require("mongoose");[m
+ [m
+[32m+[m[32mlet isConnected = false;[m
+[32m+[m
+ const connectDB = async () => {[m
+[32m+[m[32m  if (isConnected && mongoose.connection.readyState === 1) {[m
+[32m+[m[32m    return mongoose.connection;[m
+[32m+[m[32m  }[m
+   try {[m
+     const connection = await mongoose.connect(process.env.MONGO_URI);[m
+ [m
+     console.log(`🍃 MongoDB connected: ${connection.connection.host}`);[m
+[32m+[m[32m    isConnected = true;[m
+[32m+[m[32m    return connection;[m
+   } catch (error) {[m
+     console.error("❌ MongoDB connection failed:");[m
+     console.error(error.message);[m
+ [m
+[32m+[m[32m    // On Vercel (serverless) never kill the process — just throw[m
+[32m+[m[32m    // so the request handler can return a 500 instead.[m
+[32m+[m[32m    if (process.env.VERCEL) {[m
+[32m+[m[32m      throw error;[m
+[32m+[m[32m    }[m
+     process.exit(1);[m
+   }[m
+ };[m
+[1mdiff --git a/backend/controllers/authController.js b/backend/controllers/authController.js[m
+[1mindex 3e5972a..9bdf101 100644[m
+[1m--- a/backend/controllers/authController.js[m
+[1m+++ b/backend/controllers/authController.js[m
+[36m@@ -29,6 +29,11 @@[m [mconst publicUser = (user) => ({[m
+   skills: user.skills,[m
+   github: user.github,[m
+   linkedin: user.linkedin,[m
+[32m+[m[32m  leetcodeUsername: user.leetcodeUsername,[m
+[32m+[m[32m  timezone: user.timezone,[m
+[32m+[m[32m  githubUsername: user.githubUsername,[m
+[32m+[m[32m  githubRepo: user.githubRepo,[m
+[32m+[m[32m  leetcodeStats: user.leetcodeStats,[m
+   targetRoles: user.targetRoles,[m
+   streak: user.streak,[m
+   onboarded: user.onboarded,[m
+[36m@@ -197,6 +202,7 @@[m [mconst updateMe = async (req, res) => {[m
+     const allowedFields = [[m
+       "name", "college", "department", "year", "phone", "city", "bio", "avatar",[m
+       "skills", "github", "linkedin", "targetRoles", "onboarded",[m
+[32m+[m[32m      "leetcodeUsername", "timezone", "githubUsername", "githubRepo",[m
+     ];[m
+ [m
+     const updates = {};[m
+[1mdiff --git a/backend/controllers/dashboardController.js b/backend/controllers/dashboardController.js[m
+[1mindex 256fb31..786b814 100644[m
+[1m--- a/backend/controllers/dashboardController.js[m
+[1m+++ b/backend/controllers/dashboardController.js[m
+[36m@@ -188,6 +188,10 @@[m [mconst getDashboard = async (req, res) => {[m
+     }[m
+ [m
+     const [dailyQuestions, dailyTasks] = await Promise.all([pickDailyQuestions(userId), pickLearningTasks(userId)]);[m
+[32m+[m[32m    // Coding progress (streak / Easy / Medium / Hard / today's challenge) is[m
+[32m+[m[32m    // owned by the /api/v1/coding-track module, which reads CodingCompletion +[m
+[32m+[m[32m    // CodingProfile. The dashboard deliberately does not recompute it here so[m
+[32m+[m[32m    // there is exactly one source of truth for coding stats.[m
+     dailyTasks.learnedTopics.forEach((task) => {[m
+       task.questions.forEach((q) => {[m
+         q.attempted = dailyTasks.attemptMap[String(q._id)] !== undefined;[m
+[1mdiff --git a/backend/models/Activity.js b/backend/models/Activity.js[m
+[1mindex dee7fcd..c2016d7 100644[m
+[1m--- a/backend/models/Activity.js[m
+[1m+++ b/backend/models/Activity.js[m
+[36m@@ -5,7 +5,7 @@[m [mconst activitySchema = new mongoose.Schema([m
+     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },[m
+     type: {[m
+       type: String,[m
+[31m-      enum: ["practice", "assessment", "roadmap", "resume", "profile", "company"],[m
+[32m+[m[32m      enum: ["practice", "assessment", "roadmap", "resume", "profile", "company", "leetcode", "github"],[m
+       required: true,[m
+     },[m
+     description: { type: String, required: true },[m
+[1mdiff --git a/backend/models/User.js b/backend/models/User.js[m
+[1mindex 82e86b2..75fd9a4 100644[m
+[1m--- a/backend/models/User.js[m
+[1m+++ b/backend/models/User.js[m
+[36m@@ -25,6 +25,19 @@[m [mconst userSchema = new mongoose.Schema([m
+     skills: { type: [String], default: [] },[m
+     github: { type: String, trim: true, default: "" },[m
+     linkedin: { type: String, trim: true, default: "" },[m
+[32m+[m[32m    leetcodeUsername: { type: String, trim: true, default: "", index: true },[m
+[32m+[m[32m    timezone: { type: String, trim: true, default: "UTC" },[m
+[32m+[m[32m    githubUsername: { type: String, trim: true, default: "" },[m
+[32m+[m[32m    githubToken: { type: String, default: "", select: false },[m
+[32m+[m[32m    githubRepo: { type: String, trim: true, default: "moyu-leetcode-solutions" },[m
+[32m+[m[32m    leetcodeStats: {[m
+[32m+[m[32m      totalSolved: { type: Number, default: 0 },[m
+[32m+[m[32m      easySolved: { type: Number, default: 0 },[m
+[32m+[m[32m      mediumSolved: { type: Number, default: 0 },[m
+[32m+[m[32m      hardSolved: { type: Number, default: 0 },[m
+[32m+[m[32m      streakDays: { type: Number, default: 0 },[m
+[32m+[m[32m      lastSyncedAt: { type: Date, default: null },[m
+[32m+[m[32m    },[m
+     targetRoles: { type: [String], default: [] },[m
+     theme: { type: String, enum: ["light", "dark"], default: "dark" },[m
+     streak: {[m
+[1mdiff --git a/backend/package.json b/backend/package.json[m
+[1mindex b7d89c6..4c47666 100644[m
+[1m--- a/backend/package.json[m
+[1m+++ b/backend/package.json[m
+[36m@@ -5,9 +5,12 @@[m
+   "main": "index.js",[m
+   "scripts": {[m
+     "test": "echo \"Error: no test specified\" && exit 1",[m
+[32m+[m[32m    "test:coding": "node tests/coding-track.e2e.cjs",[m
+     "start": "node server.js",[m
+     "dev": "nodemon server.js",[m
+[31m-    "seed": "node seed/seed.js"[m
+[32m+[m[32m    "seed": "node seed/seed.js",[m
+[32m+[m[32m    "seed:coding": "node seed/seedCoding.js",[m
+[32m+[m[32m    "seed:challenges": "node seed/seedCodingChallenges.js"[m
+   },[m
+   "keywords": [],[m
+   "author": "",[m
+[1mdiff --git a/backend/routes/adminRoutes.js b/backend/routes/adminRoutes.js[m
+[1mindex 64d0376..87d39f2 100644[m
+[1m--- a/backend/routes/adminRoutes.js[m
+[1m+++ b/backend/routes/adminRoutes.js[m
+[36m@@ -16,6 +16,13 @@[m [mconst {[m
+   deletePracticeQuestion,[m
+   broadcastNotification,[m
+ } = require("../controllers/adminController");[m
+[32m+[m[32mconst {[m
+[32m+[m[32m  listChallenges,[m
+[32m+[m[32m  createChallenge,[m
+[32m+[m[32m  updateChallenge,[m
+[32m+[m[32m  deleteChallenge,[m
+[32m+[m[32m  studentCodingProgress,[m
+[32m+[m[32m} = require("../controllers/codingAdminController");[m
+ [m
+ const router = express.Router();[m
+ [m
+[36m@@ -40,4 +47,10 @@[m [mrouter.delete("/practice-questions/:id", deletePracticeQuestion);[m
+ [m
+ router.post("/notifications/broadcast", broadcastNotification);[m
+ [m
+[32m+[m[32mrouter.get("/coding-challenges", listChallenges);[m
+[32m+[m[32mrouter.post("/coding-challenges", createChallenge);[m
+[32m+[m[32mrouter.patch("/coding-challenges/:id", updateChallenge);[m
+[32m+[m[32mrouter.delete("/coding-challenges/:id", deleteChallenge);[m
+[32m+[m[32mrouter.get("/students/:id/coding", studentCodingProgress);[m
+[32m+[m
+ module.exports = router;[m
+[1mdiff --git a/backend/server.js b/backend/server.js[m
+[1mindex 480c83d..e2446a7 100644[m
+[1m--- a/backend/server.js[m
+[1m+++ b/backend/server.js[m
+[36m@@ -19,6 +19,7 @@[m [mconst resourceRoutes = require("./routes/resourceRoutes");[m
+ const resumeRoutes = require("./routes/resumeRoutes");[m
+ const projectRoutes = require("./routes/projectRoutes");[m
+ const codingRoutes = require("./routes/codingRoutes");[m
+[32m+[m[32mconst codingTrackRoutes = require("./routes/codingTrackRoutes");[m
+ const notificationRoutes = require("./routes/notificationRoutes");[m
+ const adminRoutes = require("./routes/adminRoutes");[m
+ [m
+[36m@@ -62,12 +63,22 @@[m [mapp.use("/api/v1/resources", resourceRoutes);[m
+ app.use("/api/v1/resume", resumeRoutes);[m
+ app.use("/api/v1/projects", projectRoutes);[m
+ app.use("/api/v1/coding", codingRoutes);[m
+[32m+[m[32mapp.use("/api/v1/coding-track", codingTrackRoutes);[m
+ app.use("/api/v1/notifications", notificationRoutes);[m
+ app.use("/api/v1/admin", adminRoutes);[m
+ [m
+ app.use(notFound);[m
+ app.use(errorHandler);[m
+ [m
+[31m-app.listen(PORT, () => {[m
+[31m-  console.log(`🚀 MOYU Backend running on http://localhost:${PORT}`);[m
+[32m+[m[32m// Connect on cold start (local + Vercel). Cached via config/db.js.[m
+[32m+[m[32mconnectDB().catch(() => {[m
+[32m+[m[32m  // Error already logged in connectDB; keep process alive on Vercel.[m
+ });[m
+[32m+[m
+[32m+[m[32mif (!process.env.VERCEL) {[m
+[32m+[m[32m  app.listen(PORT, () => {[m
+[32m+[m[32m    console.log(`🚀 MOYU Backend running on http://localhost:${PORT}`);[m
+[32m+[m[32m  });[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mmodule.exports = app;[m
+[1mdiff --git a/frontend/index.html b/frontend/index.html[m
+[1mindex 021d4ae..6b571ba 100644[m
+[1m--- a/frontend/index.html[m
+[1m+++ b/frontend/index.html[m
+[36m@@ -8,7 +8,7 @@[m
+     <link rel="preconnect" href="https://fonts.googleapis.com" />[m
+     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />[m
+     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />[m
+[31m-    <title>MOYU — Reach for the Stars, Get Placed</title>[m
+[32m+[m[32m    <title>MOYU — More You Need To Know</title>[m
+   </head>[m
+   <body>[m
+     <div id="root"></div>[m
+[1mdiff --git a/frontend/src/App.jsx b/frontend/src/App.jsx[m
+[1mindex cf3405d..2da7c37 100644[m
+[1m--- a/frontend/src/App.jsx[m
+[1m+++ b/frontend/src/App.jsx[m
+[36m@@ -18,6 +18,7 @@[m [mimport AdminStudents from "./pages/admin/AdminStudents";[m
+ import AdminCompanies from "./pages/admin/AdminCompanies";[m
+ import AdminResources from "./pages/admin/AdminResources";[m
+ import AdminPracticeQuestions from "./pages/admin/AdminPracticeQuestions";[m
+[32m+[m[32mimport AdminCodingChallenges from "./pages/admin/AdminCodingChallenges";[m
+ import AdminNotifications from "./pages/admin/AdminNotifications";[m
+ [m
+ import Settings from "./pages/Settings";[m
+[36m@@ -125,6 +126,7 @@[m [mfunction App() {[m
+           <Route path="/admin/companies" element={<AdminCompanies />} />[m
+           <Route path="/admin/resources" element={<AdminResources />} />[m
+           <Route path="/admin/practice" element={<AdminPracticeQuestions />} />[m
+[32m+[m[32m          <Route path="/admin/coding-challenges" element={<AdminCodingChallenges />} />[m
+           <Route path="/admin/notifications" element={<AdminNotifications />} />[m
+ [m
+         </Route>[m
+[1mdiff --git a/frontend/src/layouts/AdminLayout.jsx b/frontend/src/layouts/AdminLayout.jsx[m
+[1mindex 4dcbcfd..abbc66f 100644[m
+[1m--- a/frontend/src/layouts/AdminLayout.jsx[m
+[1m+++ b/frontend/src/layouts/AdminLayout.jsx[m
+[36m@@ -7,6 +7,7 @@[m [mimport {[m
+   LayoutDashboard,[m
+   LogOut,[m
+   Menu,[m
+[32m+[m[32m  Trophy,[m
+   Users,[m
+   X,[m
+ } from "lucide-react";[m
+[36m@@ -20,6 +21,7 @@[m [mconst ADMIN_NAV_ITEMS = [[m
+   { to: "/admin/companies", icon: BriefcaseBusiness, label: "Companies" },[m
+   { to: "/admin/resources", icon: BookOpen, label: "Resources" },[m
+   { to: "/admin/practice", icon: Code2, label: "Practice Questions" },[m
+[32m+[m[32m  { to: "/admin/coding-challenges", icon: Trophy, label: "Coding Challenges" },[m
+   { to: "/admin/notifications", icon: Bell, label: "Notifications" },[m
+ ];[m
+ [m
+[1mdiff --git a/frontend/src/pages/Dashboard.jsx b/frontend/src/pages/Dashboard.jsx[m
+[1mindex 7888dde..cc95420 100644[m
+[1m--- a/frontend/src/pages/Dashboard.jsx[m
+[1m+++ b/frontend/src/pages/Dashboard.jsx[m
+[36m@@ -20,10 +20,12 @@[m [mimport ErrorState from "../components/ui/ErrorState";[m
+ import StatCard from "../components/ui/StatCard";[m
+ import ProgressBar from "../components/ui/ProgressBar";[m
+ import Badge from "../components/ui/Badge";[m
+[32m+[m[32mimport CodingProgressCard from "../components/CodingProgressCard";[m
+ import { LogoMark } from "../components/Logo";[m
+ import { useAuth } from "../hooks/useAuth";[m
+ import { dashboardService } from "../services/dashboard.service";[m
+ import { practiceService } from "../services/practice.service";[m
+[32m+[m[32mimport { codingTrackService } from "../services/codingTrack.service";[m
+ [m
+ const CATEGORY_ICONS = {[m
+   coding: Code2,[m
+[36m@@ -37,6 +39,24 @@[m [mfunction Dashboard() {[m
+   const [data, setData] = useState(null);[m
+   const [loading, setLoading] = useState(true);[m
+   const [error, setError] = useState("");[m
+[32m+[m[32m  const [trackStats, setTrackStats] = useState(null);[m
+[32m+[m[32m  const [trackDaily, setTrackDaily] = useState(null);[m
+[32m+[m[32m  const [trackGithub, setTrackGithub] = useState(null);[m
+[32m+[m
+[32m+[m[32m  const loadTrack = () => {[m
+[32m+[m[32m    codingTrackService[m
+[32m+[m[32m      .getStats()[m
+[32m+[m[32m      .then((res) => res.success && setTrackStats(res.data))[m
+[32m+[m[32m      .catch(() => {});[m
+[32m+[m[32m    codingTrackService[m
+[32m+[m[32m      .getDaily()[m
+[32m+[m[32m      .then((res) => res.success && setTrackDaily(res.data))[m
+[32m+[m[32m      .catch(() => setTrackDaily(null));[m
+[32m+[m[32m    codingTrackService[m
+[32m+[m[32m      .githubStatus()[m
+[32m+[m[32m      .then((res) => res.success && setTrackGithub(res.data))[m
+[32m+[m[32m      .catch(() => {});[m
+[32m+[m[32m  };[m
+ [m
+   const loadDashboard = () => {[m
+     setLoading(true);[m
+[36m@@ -53,6 +73,7 @@[m [mfunction Dashboard() {[m
+   useEffect(() => {[m
+     setTimeout(() => {[m
+       loadDashboard();[m
+[32m+[m[32m      loadTrack();[m
+     }, 0);[m
+   }, []);[m
+ [m
+[36m@@ -158,7 +179,7 @@[m [mfunction Dashboard() {[m
+         <section className="mt-8">[m
+           <div className="flex items-center justify-between gap-3">[m
+             <div>[m
+[31m-              <h2 className="flex items-center gap-2 font-bold text-var(--text-primary)"><Sparkles size={18} className="text-brand-300" /> Today's Practice</h2>[m
+[32m+[m[32m              <h2 className="flex items-center gap-2 font-bold text-var(--text-primary)"><Sparkles size={18} className="text-brand-300" /> Today&apos;s Practice</h2>[m
+               <p className="mt-1 text-xs text-var(--text-muted)">Coding, aptitude & communication questions picked for you today. Solve them right here.</p>[m
+             </div>[m
+             <Link to="/practice" className="shrink-0 text-xs font-semibold text-brand-300 hover:text-brand-200">[m
+[36m@@ -168,6 +189,17 @@[m [mfunction Dashboard() {[m
+           <div className="mt-4 grid gap-4 lg:grid-cols-2">[m
+             {data.dailyQuestions.map((q) => <DailyQuestionCard key={q._id} question={q} />)}[m
+           </div>[m
+[32m+[m[32m          <div className="mt-4">[m
+[32m+[m[32m            <CodingProgressCard[m
+[32m+[m[32m              stats={trackStats}[m
+[32m+[m[32m              daily={trackDaily}[m
+[32m+[m[32m              github={trackGithub}[m
+[32m+[m[32m              onChanged={() => {[m
+[32m+[m[32m                loadTrack();[m
+[32m+[m[32m                loadDashboard();[m
+[32m+[m[32m              }}[m
+[32m+[m[32m            />[m
+[32m+[m[32m          </div>[m
+         </section>[m
+       )}[m
+ [m
+[1mdiff --git a/frontend/src/pages/Home.jsx b/frontend/src/pages/Home.jsx[m
+[1mindex 92466d7..33f3632 100644[m
+[1m--- a/frontend/src/pages/Home.jsx[m
+[1m+++ b/frontend/src/pages/Home.jsx[m
+[36m@@ -171,7 +171,7 @@[m [mfunction Home() {[m
+       <footer className="relative z-10 border-t border-brand-100 bg-white px-6 py-10">[m
+         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-6 sm:flex-row sm:items-center">[m
+           <div className="flex items-center gap-4"><Logo size={40} dark /><p className="text-sm font-medium text-brand-800/70">Learn. Practice. Get Placed.</p></div>[m
+[31m-          <p className="text-sm font-medium text-brand-800/60">© 2026 MOYU · Reach for the stars.</p>[m
+[32m+[m[32m          <p className="text-sm font-medium text-brand-800/60">© 2026 MOYU · More You Need To Know.</p>[m
+         </div>[m
+       </footer>[m
+     </div>[m
+[1mdiff --git a/frontend/src/pages/Practice.jsx b/frontend/src/pages/Practice.jsx[m
+[1mindex d7ea281..6fa6e8f 100644[m
+[1m--- a/frontend/src/pages/Practice.jsx[m
+[1m+++ b/frontend/src/pages/Practice.jsx[m
+[36m@@ -1,4 +1,4 @@[m
+[31m-import { Award, BookOpenCheck, CheckCircle2, ChevronLeft, ChevronRight, Code2, RotateCcw, Target, TrendingUp, XCircle } from "lucide-react";[m
+[32m+[m[32mimport { Award, BookOpenCheck, CheckCircle2, ChevronLeft, ChevronRight, Code2, ExternalLink, GitBranch, RotateCcw, Target, TrendingUp, XCircle } from "lucide-react";[m
+ import { useEffect, useState } from "react";[m
+ import DashboardLayout from "../layouts/DashboardLayout";[m
+ import LoadingState from "../components/ui/LoadingState";[m
+[36m@@ -6,6 +6,8 @@[m [mimport Badge from "../components/ui/Badge";[m
+ import StatCard from "../components/ui/StatCard";[m
+ import ProgressBar from "../components/ui/ProgressBar";[m
+ import { practiceService } from "../services/practice.service";[m
+[32m+[m[32mimport { codingTrackService } from "../services/codingTrack.service";[m
+[32m+[m[32mimport { EXTERNAL_PLATFORMS, leetcodeUrl } from "../services/externalPlatforms";[m
+ [m
+ const CATEGORIES = ["Coding", "Aptitude", "Communication", "Verbal", "SQL", "DSA", "Technical MCQ", "Interview Question"];[m
+ [m
+[36m@@ -13,6 +15,17 @@[m [mfunction Practice() {[m
+   const [stats, setStats] = useState(null);[m
+   const [loading, setLoading] = useState(true);[m
+   const [error, setError] = useState("");[m
+[32m+[m[32m  const [lcStatus, setLcStatus] = useState(null);[m
+[32m+[m[32m  const [markForm, setMarkForm] = useState({ slugOrUrl: "", language: "python", code: "" });[m
+[32m+[m[32m  const [markBusy, setMarkBusy] = useState(false);[m
+[32m+[m[32m  const [markMsg, setMarkMsg] = useState("");[m
+[32m+[m
+[32m+[m[32m  const refreshLc = () => {[m
+[32m+[m[32m    codingTrackService[m
+[32m+[m[32m      .getStats()[m
+[32m+[m[32m      .then((res) => res.success && setLcStatus(res.data))[m
+[32m+[m[32m      .catch(() => {});[m
+[32m+[m[32m  };[m
+ [m
+   const [testCategory, setTestCategory] = useState("");[m
+   const [testCount, setTestCount] = useState(10);[m
+[36m@@ -30,8 +43,46 @@[m [mfunction Practice() {[m
+       .then((res) => res.success && setStats(res.data))[m
+       .catch(() => {})[m
+       .finally(() => setLoading(false));[m
+[32m+[m[32m    refreshLc();[m
+   }, []);[m
+ [m
+[32m+[m[32m  const submitMarkSolved = async () => {[m
+[32m+[m[32m    if (!markForm.slugOrUrl.trim()) return setMarkMsg("Paste the LeetCode problem link first.");[m
+[32m+[m[32m    setMarkBusy(true);[m
+[32m+[m[32m    setMarkMsg("");[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      const url = markForm.slugOrUrl.trim();[m
+[32m+[m[32m      const payload = { slugOrUrl: url };[m
+[32m+[m[32m      // Only send submissionUrl when it really is a submission link — the API[m
+[32m+[m[32m      // rejects anything that is not a LeetCode problem/submission URL.[m
+[32m+[m[32m      if (/\/submissions\//.test(url)) payload.submissionUrl = url;[m
+[32m+[m[32m      const res = await codingTrackService.complete(payload);[m
+[32m+[m[32m      let extra = res.message;[m
+[32m+[m[32m      // LeetCode accepted solution -> GitHub synchronization (separate feature:[m
+[32m+[m[32m      // this never decides whether the problem counts as completed).[m
+[32m+[m[32m      const completionId = res.data && res.data.completion && res.data.completion._id;[m
+[32m+[m[32m      if (completionId && markForm.code.trim()) {[m
+[32m+[m[32m        try {[m
+[32m+[m[32m          const gh = await codingTrackService.githubSync({[m
+[32m+[m[32m            completionId,[m
+[32m+[m[32m            language: markForm.language,[m
+[32m+[m[32m            code: markForm.code,[m
+[32m+[m[32m          });[m
+[32m+[m[32m          extra += " " + gh.message;[m
+[32m+[m[32m        } catch (e) {[m
+[32m+[m[32m          extra += " (GitHub sync skipped: " + (e.message || "not connected") + ")";[m
+[32m+[m[32m        }[m
+[32m+[m[32m      }[m
+[32m+[m[32m      setMarkMsg(extra);[m
+[32m+[m[32m      setMarkForm({ slugOrUrl: "", language: "python", code: "" });[m
+[32m+[m[32m      refreshLc();[m
+[32m+[m[32m    } catch (e) {[m
+[32m+[m[32m      setMarkMsg(e.message || "Could not mark solved.");[m
+[32m+[m[32m    } finally {[m
+[32m+[m[32m      setMarkBusy(false);[m
+[32m+[m[32m    }[m
+[32m+[m[32m  };[m
+[32m+[m
+   const startTest = async () => {[m
+     setError("");[m
+     setSubmitting(true);[m
+[36m@@ -166,6 +217,16 @@[m [mfunction Practice() {[m
+               </section>[m
+             </div>[m
+           </div>[m
+[32m+[m
+[32m+[m[32m          <ExternalCodingSection[m
+[32m+[m[32m            lcStatus={lcStatus}[m
+[32m+[m[32m            markForm={markForm}[m
+[32m+[m[32m            setMarkForm={setMarkForm}[m
+[32m+[m[32m            markBusy={markBusy}[m
+[32m+[m[32m            markMsg={markMsg}[m
+[32m+[m[32m            onMark={submitMarkSolved}[m
+[32m+[m[32m            onLinked={refreshLc}[m
+[32m+[m[32m          />[m
+         </div>[m
+       )}[m
+ [m
+[36m@@ -404,4 +465,292 @@[m [mfunction Practice() {[m
+   );[m
+ }[m
+ [m
+[32m+[m[32mfunction ExternalCodingSection({ lcStatus, markForm, setMarkForm, markBusy, markMsg, onMark, onLinked }) {[m
+[32m+[m[32m  return ([m
+[32m+[m[32m    <div className="space-y-6">[m
+[32m+[m[32m      <section>[m
+[32m+[m[32m        <div className="flex items-center justify-between gap-3">[m
+[32m+[m[32m          <div>[m
+[32m+[m[32m            <h2 className="flex items-center gap-2 font-bold text-var(--text-primary)">[m
+[32m+[m[32m              <Code2 size={18} className="text-brand-300" /> Code on real platforms[m
+[32m+[m[32m            </h2>[m
+[32m+[m[32m            <p className="mt-1 text-xs text-var(--text-muted)">[m
+[32m+[m[32m              Tap a card to open the official site. Solve there, then sync back for Day credit.[m
+[32m+[m[32m            </p>[m
+[32m+[m[32m          </div>[m
+[32m+[m[32m        </div>[m
+[32m+[m[32m        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">[m
+[32m+[m[32m          {EXTERNAL_PLATFORMS.map((p) => ([m
+[32m+[m[32m            <a[m
+[32m+[m[32m              key={p.id}[m
+[32m+[m[32m              href={p.url}[m
+[32m+[m[32m              target="_blank"[m
+[32m+[m[32m              rel="noreferrer"[m
+[32m+[m[32m              className="group rounded-2xl border border-var(--card-border) bg-var(--card-bg) p-5 transition hover:-translate-y-1 hover:border-brand-400/40"[m
+[32m+[m[32m            >[m
+[32m+[m[32m              <div className={"flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br text-sm font-black text-white shadow-lg " + p.accent}>[m
+[32m+[m[32m                {p.mark}[m
+[32m+[m[32m              </div>[m
+[32m+[m[32m              <h3 className="mt-4 flex items-center gap-1.5 font-bold text-var(--text-primary)">[m
+[32m+[m[32m                {p.name} <ExternalLink size={14} className="text-var(--text-muted) transition group-hover:translate-x-0.5 group-hover:text-brand-300" />[m
+[32m+[m[32m              </h3>[m
+[32m+[m[32m              <p className="mt-1 text-xs text-var(--text-muted)">{p.tagline}</p>[m
+[32m+[m[32m            </a>[m
+[32m+[m[32m          ))}[m
+[32m+[m[32m        </div>[m
+[32m+[m[32m      </section>[m
+[32m+[m
+[32m+[m[32m      <section className="rounded-2xl border border-amber-400/20 bg-gradient-to-br from-amber-500/10 via-transparent to-orange-500/5 p-6">[m
+[32m+[m[32m        <h3 className="font-bold text-var(--text-primary)">Solved on LeetCode? Claim Day credit</h3>[m
+[32m+[m[32m        <p className="mt-1 text-xs text-var(--text-muted)">[m
+[32m+[m[32m          After Submit on leetcode.com, paste the problem link + your code here. MOYU marks Day complete[m
+[32m+[m[32m          (Easy/Medium/Hard) and commits the file to your GitHub repo as YOU.[m
+[32m+[m[32m        </p>[m
+[32m+[m[32m        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_140px]">[m
+[32m+[m[32m          <input[m
+[32m+[m[32m            value={markForm.slugOrUrl}[m
+[32m+[m[32m            onChange={(e) => setMarkForm({ ...markForm, slugOrUrl: e.target.value })}[m
+[32m+[m[32m            placeholder="https://leetcode.com/problems/two-sum/"[m
+[32m+[m[32m            className="rounded-xl border border-var(--card-border) bg-var(--bg-tertiary) px-4 py-2.5 text-sm text-var(--text-primary) outline-none placeholder:text-var(--text-muted)"[m
+[32m+[m[32m          />[m
+[32m+[m[32m          <select[m
+[32m+[m[32m            value={markForm.language}[m
+[32m+[m[32m            onChange={(e) => setMarkForm({ ...markForm, language: e.target.value })}[m
+[32m+[m[32m            className="rounded-xl border border-var(--card-border) bg-var(--bg-tertiary) px-4 py-2.5 text-sm text-var(--text-primary) outline-none"[m
+[32m+[m[32m          >[m
+[32m+[m[32m            <option value="python">Python</option>[m
+[32m+[m[32m            <option value="java">Java</option>[m
+[32m+[m[32m            <option value="cpp">C++</option>[m
+[32m+[m[32m            <option value="c">C</option>[m
+[32m+[m[32m            <option value="javascript">JavaScript</option>[m
+[32m+[m[32m          </select>[m
+[32m+[m[32m        </div>[m
+[32m+[m[32m        <textarea[m
+[32m+[m[32m          value={markForm.code}[m
+[32m+[m[32m          onChange={(e) => setMarkForm({ ...markForm, code: e.target.value })}[m
+[32m+[m[32m          rows={5}[m
+[32m+[m[32m          placeholder="Paste your accepted solution (optional, but needed for the GitHub commit)…"[m
+[32m+[m[32m          className="mt-3 w-full rounded-xl border border-var(--card-border) bg-var(--bg-tertiary) px-4 py-3 font-mono text-xs text-var(--text-primary) outline-none placeholder:text-var(--text-muted)"[m
+[32m+[m[32m        />[m
+[32m+[m[32m        <div className="mt-3 flex flex-wrap items-center gap-3">[m
+[32m+[m[32m          <button[m
+[32m+[m[32m            onClick={onMark}[m
+[32m+[m[32m            disabled={markBusy}[m
+[32m+[m[32m            className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/25 disabled:opacity-50"[m
+[32m+[m[32m          >[m
+[32m+[m[32m            {markBusy ? "Marking…" : "Mark as Solved"}[m
+[32m+[m[32m          </button>[m
+[32m+[m[32m          {markMsg && <p className="text-xs font-semibold text-var(--text-secondary)">{markMsg}</p>}[m
+[32m+[m[32m        </div>[m
+[32m+[m[32m        {lcStatus && lcStatus.recent && lcStatus.recent.length > 0 && ([m
+[32m+[m[32m          <div className="mt-4 space-y-2">[m
+[32m+[m[32m            {lcStatus.recent.slice(0, 5).map((s) => ([m
+[32m+[m[32m              <a[m
+[32m+[m[32m                key={s.slug}[m
+[32m+[m[32m                href={leetcodeUrl(s.slug)}[m
+[32m+[m[32m                target="_blank"[m
+[32m+[m[32m                rel="noreferrer"[m
+[32m+[m[32m                className="flex items-center justify-between gap-3 rounded-xl border border-var(--card-border) bg-var(--card-bg) px-4 py-2.5 text-sm transition hover:border-amber-400/40"[m
+[32m+[m[32m              >[m
+[32m+[m[32m                <span className="truncate font-semibold text-var(--text-primary)">[m
+[32m+[m[32m                  {s.title} {s.githubPath && <GitBranch size={13} className="ml-1 inline text-emerald-400" />}[m
+[32m+[m[32m                </span>[m
+[32m+[m[32m                <span className="shrink-0 text-[11px] font-bold text-amber-300">{s.difficulty}</span>[m
+[32m+[m[32m              </a>[m
+[32m+[m[32m            ))}[m
+[32m+[m[32m          </div>[m
+[32m+[m[32m        )}[m
+[32m+[m[32m      </section>[m
+[32m+[m
+[32m+[m[32m      <LeetCodeLinkCard[m
+[32m+[m[32m        initialUsername={(lcStatus && lcStatus.leetcodeUsername) || ""}[m
+[32m+[m[32m        onChanged={onLinked}[m
+[32m+[m[32m      />[m
+[32m+[m[32m      <GitHubOAuthCard onChanged={onLinked} />[m
+[32m+[m[32m      {lcStatus && lcStatus.lastSyncedAt && ([m
+[32m+[m[32m        <p className="text-[11px] text-var(--text-muted)">[m
+[32m+[m[32m          Last LeetCode sync: {new Date(lcStatus.lastSyncedAt).toLocaleString()}[m
+[32m+[m[32m        </p>[m
+[32m+[m[32m      )}[m
+[32m+[m[32m    </div>[m
+[32m+[m[32m  );[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mfunction LeetCodeLinkCard({ initialUsername, onChanged }) {[m
+[32m+[m[32m  const [username, setUsername] = useState(initialUsername || "");[m
+[32m+[m[32m  const [busy, setBusy] = useState("");[m
+[32m+[m[32m  const [msg, setMsg] = useState("");[m
+[32m+[m
+[32m+[m[32m  useEffect(() => {[m
+[32m+[m[32m    // eslint-disable-next-line react-hooks/set-state-in-effect[m
+[32m+[m[32m    setUsername(initialUsername || "");[m
+[32m+[m[32m  }, [initialUsername]);[m
+[32m+[m
+[32m+[m[32m  const link = async () => {[m
+[32m+[m[32m    const name = username.trim().replace(/^@/, "");[m
+[32m+[m[32m    if (!name) return setMsg("Enter your LeetCode username first.");[m
+[32m+[m[32m    setBusy("link");[m
+[32m+[m[32m    setMsg("");[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      const res = await codingTrackService.updateLink({ leetcodeUsername: name });[m
+[32m+[m[32m      setMsg(res.message);[m
+[32m+[m[32m      if (onChanged) onChanged();[m
+[32m+[m[32m    } catch (e) {[m
+[32m+[m[32m      setMsg(e.message || "Could not link that LeetCode username.");[m
+[32m+[m[32m    } finally {[m
+[32m+[m[32m      setBusy("");[m
+[32m+[m[32m    }[m
+[32m+[m[32m  };[m
+[32m+[m
+[32m+[m[32m  const verify = async () => {[m
+[32m+[m[32m    setBusy("verify");[m
+[32m+[m[32m    setMsg("");[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      const res = await codingTrackService.verify();[m
+[32m+[m[32m      setMsg(res.message);[m
+[32m+[m[32m      if (onChanged) onChanged();[m
+[32m+[m[32m    } catch (e) {[m
+[32m+[m[32m      setMsg(e.message || "Auto-check failed — use Mark as Solved below.");[m
+[32m+[m[32m    } finally {[m
+[32m+[m[32m      setBusy("");[m
+[32m+[m[32m    }[m
+[32m+[m[32m  };[m
+[32m+[m
+[32m+[m[32m  return ([m
+[32m+[m[32m    <section className="rounded-2xl border border-var(--card-border) bg-var(--card-bg) p-6">[m
+[32m+[m[32m      <h3 className="font-bold text-var(--text-primary)">LeetCode account</h3>[m
+[32m+[m[32m      <p className="mt-1 text-xs text-var(--text-muted)">[m
+[32m+[m[32m        Link your public username so MOYU can auto-check your Accepted submissions. We never ask for your[m
+[32m+[m[32m        LeetCode password or session cookie.[m
+[32m+[m[32m      </p>[m
+[32m+[m[32m      <div className="mt-3 flex flex-col gap-2 sm:flex-row">[m
+[32m+[m[32m        <input[m
+[32m+[m[32m          value={username}[m
+[32m+[m[32m          onChange={(e) => setUsername(e.target.value)}[m
+[32m+[m[32m          placeholder="LeetCode username (e.g. neal_wu)"[m
+[32m+[m[32m          className="min-w-0 flex-1 rounded-xl border border-var(--card-border) bg-var(--bg-tertiary) px-4 py-2.5 text-sm text-var(--text-primary) outline-none placeholder:text-var(--text-muted)"[m
+[32m+[m[32m        />[m
+[32m+[m[32m        <button[m
+[32m+[m[32m          onClick={link}[m
+[32m+[m[32m          disabled={busy === "link"}[m
+[32m+[m[32m          className="shrink-0 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50"[m
+[32m+[m[32m        >[m
+[32m+[m[32m          {busy === "link" ? "Linking…" : "Link LeetCode"}[m
+[32m+[m[32m        </button>[m
+[32m+[m[32m        <button[m
+[32m+[m[32m          onClick={verify}[m
+[32m+[m[32m          disabled={busy === "verify"}[m
+[32m+[m[32m          className="shrink-0 rounded-xl border border-var(--card-border) px-5 py-2.5 text-xs font-bold text-var(--text-secondary) transition hover:border-brand-400/40 disabled:opacity-50"[m
+[32m+[m[32m        >[m
+[32m+[m[32m          {busy === "verify" ? "Checking…" : "Check my LeetCode"}[m
+[32m+[m[32m        </button>[m
+[32m+[m[32m      </div>[m
+[32m+[m[32m      {msg && <p className="mt-3 text-xs font-semibold text-var(--text-secondary)">{msg}</p>}[m
+[32m+[m[32m    </section>[m
+[32m+[m[32m  );[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mfunction GitHubOAuthCard({ onChanged }) {[m
+[32m+[m[32m  const [status, setStatus] = useState(null);[m
+[32m+[m[32m  const [repo, setRepo] = useState("");[m
+[32m+[m[32m  const [busy, setBusy] = useState(false);[m
+[32m+[m[32m  const [msg, setMsg] = useState("");[m
+[32m+[m
+[32m+[m[32m  const load = () => {[m
+[32m+[m[32m    codingTrackService[m
+[32m+[m[32m      .githubStatus()[m
+[32m+[m[32m      .then((res) => res.success && setStatus(res.data))[m
+[32m+[m[32m      .catch(() => {});[m
+[32m+[m[32m  };[m
+[32m+[m
+[32m+[m[32m  useEffect(() => {[m
+[32m+[m[32m    load();[m
+[32m+[m[32m  }, []);[m
+[32m+[m
+[32m+[m[32m  useEffect(() => {[m
+[32m+[m[32m    const params = new URLSearchParams(window.location.search);[m
+[32m+[m[32m    const code = params.get("github_code");[m
+[32m+[m[32m    if (!code) return;[m
+[32m+[m[32m    // eslint-disable-next-line react-hooks/set-state-in-effect[m
+[32m+[m[32m    setBusy(true);[m
+[32m+[m[32m    codingTrackService[m
+[32m+[m[32m      .githubCallback(code)[m
+[32m+[m[32m      .then((res) => {[m
+[32m+[m[32m        setMsg(res.message);[m
+[32m+[m[32m        params.delete("github_code");[m
+[32m+[m[32m        window.history.replaceState({}, "", window.location.pathname);[m
+[32m+[m[32m        load();[m
+[32m+[m[32m        if (onChanged) onChanged();[m
+[32m+[m[32m      })[m
+[32m+[m[32m      .catch((e) => setMsg(e.message || "GitHub connect failed."))[m
+[32m+[m[32m      .finally(() => setBusy(false));[m
+[32m+[m[32m  }, [onChanged]);[m
+[32m+[m
+[32m+[m[32m  const connect = async () => {[m
+[32m+[m[32m    setBusy(true);[m
+[32m+[m[32m    setMsg("");[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      const res = await codingTrackService.githubAuthUrl();[m
+[32m+[m[32m      window.location.href = res.data.url;[m
+[32m+[m[32m    } catch (e) {[m
+[32m+[m[32m      setMsg(e.message || "GitHub OAuth is not configured yet.");[m
+[32m+[m[32m      setBusy(false);[m
+[32m+[m[32m    }[m
+[32m+[m[32m  };[m
+[32m+[m
+[32m+[m[32m  const saveRepo = async () => {[m
+[32m+[m[32m    if (!repo.trim()) return setMsg("Enter owner/repo first.");[m
+[32m+[m[32m    setBusy(true);[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      const res = await codingTrackService.githubSelectRepo(repo.trim());[m
+[32m+[m[32m      setMsg(res.message);[m
+[32m+[m[32m      load();[m
+[32m+[m[32m    } catch (e) {[m
+[32m+[m[32m      setMsg(e.message || "Could not select repo.");[m
+[32m+[m[32m    } finally {[m
+[32m+[m[32m      setBusy(false);[m
+[32m+[m[32m    }[m
+[32m+[m[32m  };[m
+[32m+[m
+[32m+[m[32m  return ([m
+[32m+[m[32m    <section className="rounded-2xl border border-var(--card-border) bg-var(--card-bg) p-6">[m
+[32m+[m[32m      <h3 className="font-bold text-var(--text-primary)">GitHub (OAuth, separate from progress)</h3>[m
+[32m+[m[32m      <p className="mt-1 text-xs text-var(--text-muted)">[m
+[32m+[m[32m        Connecting GitHub never marks problems complete — it only syncs solution files to your repo as your commits.[m
+[32m+[m[32m        No passwords; token stored encrypted server-side.[m
+[32m+[m[32m      </p>[m
+[32m+[m[32m      {status && status.connected ? ([m
+[32m+[m[32m        <div className="mt-4 space-y-2 text-sm">[m
+[32m+[m[32m          <p className="font-semibold text-emerald-400">Connected as @{status.githubUsername}</p>[m
+[32m+[m[32m          <p className="text-xs text-var(--text-muted)">Repo: {status.repoFullName || "not selected yet"}</p>[m
+[32m+[m[32m          <div className="flex gap-2">[m
+[32m+[m[32m            <input[m
+[32m+[m[32m              value={repo}[m
+[32m+[m[32m              onChange={(e) => setRepo(e.target.value)}[m
+[32m+[m[32m              placeholder="owner/moyu-leetcode-solutions"[m
+[32m+[m[32m              className="min-w-0 flex-1 rounded-xl border border-var(--card-border) bg-var(--bg-tertiary) px-4 py-2.5 text-sm text-var(--text-primary) outline-none placeholder:text-var(--text-muted)"[m
+[32m+[m[32m            />[m
+[32m+[m[32m            <button[m
+[32m+[m[32m              onClick={saveRepo}[m
+[32m+[m[32m              disabled={busy}[m
+[32m+[m[32m              className="shrink-0 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50"[m
+[32m+[m[32m            >[m
+[32m+[m[32m              Save repo[m
+[32m+[m[32m            </button>[m
+[32m+[m[32m          </div>[m
+[32m+[m[32m        </div>[m
+[32m+[m[32m      ) : ([m
+[32m+[m[32m        <button[m
+[32m+[m[32m          onClick={connect}[m
+[32m+[m[32m          disabled={busy}[m
+[32m+[m[32m          className="mt-4 rounded-xl bg-gradient-to-r from-slate-600 to-slate-900 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"[m
+[32m+[m[32m        >[m
+[32m+[m[32m          {busy ? "Working…" : "Connect with GitHub"}[m
+[32m+[m[32m        </button>[m
+[32m+[m[32m      )}[m
+[32m+[m[32m      {msg && <p className="mt-3 text-xs font-semibold text-var(--text-secondary)">{msg}</p>}[m
+[32m+[m[32m    </section>[m
+[32m+[m[32m  );[m
+[32m+[m[32m}[m
+[32m+[m
+ export default Practice;[m
+\ No newline at end of file[m
+[1mdiff --git a/frontend/src/services/admin.service.js b/frontend/src/services/admin.service.js[m
+[1mindex 65389e6..4062bc7 100644[m
+[1m--- a/frontend/src/services/admin.service.js[m
+[1m+++ b/frontend/src/services/admin.service.js[m
+[36m@@ -17,5 +17,11 @@[m [mexport const adminService = {[m
+   updatePracticeQuestion: (id, payload) => api.patch(`/admin/practice-questions/${id}`, payload).then((res) => res.data),[m
+   deletePracticeQuestion: (id) => api.delete(`/admin/practice-questions/${id}`).then((res) => res.data),[m
+ [m
+[32m+[m[32m  listCodingChallenges: () => api.get("/admin/coding-challenges").then((res) => res.data),[m
+[32m+[m[32m  createCodingChallenge: (payload) => api.post("/admin/coding-challenges", payload).then((res) => res.data),[m
+[32m+[m[32m  updateCodingChallenge: (id, payload) => api.patch(`/admin/coding-challenges/${id}`, payload).then((res) => res.data),[m
+[32m+[m[32m  deleteCodingChallenge: (id) => api.delete(`/admin/coding-challenges/${id}`).then((res) => res.data),[m
+[32m+[m[32m  getStudentCoding: (id) => api.get(`/admin/students/${id}/coding`).then((res) => res.data),[m
+[32m+[m
+   broadcastNotification: (payload) => api.post("/admin/notifications/broadcast", payload).then((res) => res.data),[m
+ };[m
+[1mdiff --git a/frontend/src/services/api.js b/frontend/src/services/api.js[m
+[1mindex 4c6ff90..5d575df 100644[m
+[1m--- a/frontend/src/services/api.js[m
+[1m+++ b/frontend/src/services/api.js[m
+[36m@@ -1,6 +1,9 @@[m
+ import axios from "axios";[m
+ [m
+[31m-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api/v1";[m
+[32m+[m[32m// On Vercel the frontend + backend are same-origin, so use a relative[m
+[32m+[m[32m// base URL when VITE_API_URL is not set (e.g. "/api/v1").[m
+[32m+[m[32m// Locally it falls back to http://localhost:5000/api/v1.[m
+[32m+[m[32mconst API_BASE_URL = import.meta.env.VITE_API_URL || "/api/v1";[m
+ [m
+ const api = axios.create({[m
+   baseURL: API_BASE_URL,[m

@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Trophy,
   Users,
   X,
 } from "lucide-react";
@@ -20,6 +21,7 @@ const ADMIN_NAV_ITEMS = [
   { to: "/admin/companies", icon: BriefcaseBusiness, label: "Companies" },
   { to: "/admin/resources", icon: BookOpen, label: "Resources" },
   { to: "/admin/practice", icon: Code2, label: "Practice Questions" },
+  { to: "/admin/coding-challenges", icon: Trophy, label: "Coding Challenges" },
   { to: "/admin/notifications", icon: Bell, label: "Notifications" },
 ];
 

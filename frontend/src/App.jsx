@@ -18,6 +18,7 @@ import AdminStudents from "./pages/admin/AdminStudents";
 import AdminCompanies from "./pages/admin/AdminCompanies";
 import AdminResources from "./pages/admin/AdminResources";
 import AdminPracticeQuestions from "./pages/admin/AdminPracticeQuestions";
+import AdminCodingChallenges from "./pages/admin/AdminCodingChallenges";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 
 import Settings from "./pages/Settings";
@@ -125,6 +126,7 @@ function App() {
           <Route path="/admin/companies" element={<AdminCompanies />} />
           <Route path="/admin/resources" element={<AdminResources />} />
           <Route path="/admin/practice" element={<AdminPracticeQuestions />} />
+          <Route path="/admin/coding-challenges" element={<AdminCodingChallenges />} />
           <Route path="/admin/notifications" element={<AdminNotifications />} />
 
         </Route>

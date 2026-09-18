@@ -1,4 +1,4 @@
-import { Award, BookOpenCheck, CheckCircle2, ChevronLeft, ChevronRight, Code2, RotateCcw, Target, TrendingUp, XCircle } from "lucide-react";
+import { Award, BookOpenCheck, CheckCircle2, ChevronLeft, ChevronRight, Code2, ExternalLink, GitBranch, RotateCcw, Target, TrendingUp, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import DashboardLayout from "../layouts/DashboardLayout";
 import LoadingState from "../components/ui/LoadingState";
@@ -6,6 +6,8 @@ import Badge from "../components/ui/Badge";
 import StatCard from "../components/ui/StatCard";
 import ProgressBar from "../components/ui/ProgressBar";
 import { practiceService } from "../services/practice.service";
+import { codingTrackService } from "../services/codingTrack.service";
+import { EXTERNAL_PLATFORMS, leetcodeUrl } from "../services/externalPlatforms";
 
 const CATEGORIES = ["Coding", "Aptitude", "Communication", "Verbal", "SQL", "DSA", "Technical MCQ", "Interview Question"];
 
@@ -13,6 +15,17 @@ function Practice() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [lcStatus, setLcStatus] = useState(null);
+  const [markForm, setMarkForm] = useState({ slugOrUrl: "", language: "python", code: "" });
+  const [markBusy, setMarkBusy] = useState(false);
+  const [markMsg, setMarkMsg] = useState("");
+
+  const refreshLc = () => {
+    codingTrackService
+      .getStats()
+      .then((res) => res.success && setLcStatus(res.data))
+      .catch(() => {});
+  };
 
   const [testCategory, setTestCategory] = useState("");
   const [testCount, setTestCount] = useState(10);
@@ -30,7 +43,45 @@ function Practice() {
       .then((res) => res.success && setStats(res.data))
       .catch(() => {})
       .finally(() => setLoading(false));
+    refreshLc();
   }, []);
+
+  const submitMarkSolved = async () => {
+    if (!markForm.slugOrUrl.trim()) return setMarkMsg("Paste the LeetCode problem link first.");
+    setMarkBusy(true);
+    setMarkMsg("");
+    try {
+      const url = markForm.slugOrUrl.trim();
+      const payload = { slugOrUrl: url };
+      // Only send submissionUrl when it really is a submission link — the API
+      // rejects anything that is not a LeetCode problem/submission URL.
+      if (/\/submissions\//.test(url)) payload.submissionUrl = url;
+      const res = await codingTrackService.complete(payload);
+      let extra = res.message;
+      // LeetCode accepted solution -> GitHub synchronization (separate feature:
+      // this never decides whether the problem counts as completed).
+      const completionId = res.data && res.data.completion && res.data.completion._id;
+      if (completionId && markForm.code.trim()) {
+        try {
+          const gh = await codingTrackService.githubSync({
+            completionId,
+            language: markForm.language,
+            code: markForm.code,
+          });
+          extra += " " + gh.message;
+        } catch (e) {
+          extra += " (GitHub sync skipped: " + (e.message || "not connected") + ")";
+        }
+      }
+      setMarkMsg(extra);
+      setMarkForm({ slugOrUrl: "", language: "python", code: "" });
+      refreshLc();
+    } catch (e) {
+      setMarkMsg(e.message || "Could not mark solved.");
+    } finally {
+      setMarkBusy(false);
+    }
+  };
 
   const startTest = async () => {
     setError("");
@@ -166,6 +217,16 @@ function Practice() {
               </section>
             </div>
           </div>
+
+          <ExternalCodingSection
+            lcStatus={lcStatus}
+            markForm={markForm}
+            setMarkForm={setMarkForm}
+            markBusy={markBusy}
+            markMsg={markMsg}
+            onMark={submitMarkSolved}
+            onLinked={refreshLc}
+          />
         </div>
       )}
 
@@ -401,6 +462,294 @@ function Practice() {
         </div>
       )}
     </DashboardLayout>
+  );
+}
+
+function ExternalCodingSection({ lcStatus, markForm, setMarkForm, markBusy, markMsg, onMark, onLinked }) {
+  return (
+    <div className="space-y-6">
+      <section>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 font-bold text-var(--text-primary)">
+              <Code2 size={18} className="text-brand-300" /> Code on real platforms
+            </h2>
+            <p className="mt-1 text-xs text-var(--text-muted)">
+              Tap a card to open the official site. Solve there, then sync back for Day credit.
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {EXTERNAL_PLATFORMS.map((p) => (
+            <a
+              key={p.id}
+              href={p.url}
+              target="_blank"
+              rel="noreferrer"
+              className="group rounded-2xl border border-var(--card-border) bg-var(--card-bg) p-5 transition hover:-translate-y-1 hover:border-brand-400/40"
+            >
+              <div className={"flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br text-sm font-black text-white shadow-lg " + p.accent}>
+                {p.mark}
+              </div>
+              <h3 className="mt-4 flex items-center gap-1.5 font-bold text-var(--text-primary)">
+                {p.name} <ExternalLink size={14} className="text-var(--text-muted) transition group-hover:translate-x-0.5 group-hover:text-brand-300" />
+              </h3>
+              <p className="mt-1 text-xs text-var(--text-muted)">{p.tagline}</p>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-amber-400/20 bg-gradient-to-br from-amber-500/10 via-transparent to-orange-500/5 p-6">
+        <h3 className="font-bold text-var(--text-primary)">Solved on LeetCode? Claim Day credit</h3>
+        <p className="mt-1 text-xs text-var(--text-muted)">
+          After Submit on leetcode.com, paste the problem link + your code here. MOYU marks Day complete
+          (Easy/Medium/Hard) and commits the file to your GitHub repo as YOU.
+        </p>
+        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_140px]">
+          <input
+            value={markForm.slugOrUrl}
+            onChange={(e) => setMarkForm({ ...markForm, slugOrUrl: e.target.value })}
+            placeholder="https://leetcode.com/problems/two-sum/"
+            className="rounded-xl border border-var(--card-border) bg-var(--bg-tertiary) px-4 py-2.5 text-sm text-var(--text-primary) outline-none placeholder:text-var(--text-muted)"
+          />
+          <select
+            value={markForm.language}
+            onChange={(e) => setMarkForm({ ...markForm, language: e.target.value })}
+            className="rounded-xl border border-var(--card-border) bg-var(--bg-tertiary) px-4 py-2.5 text-sm text-var(--text-primary) outline-none"
+          >
+            <option value="python">Python</option>
+            <option value="java">Java</option>
+            <option value="cpp">C++</option>
+            <option value="c">C</option>
+            <option value="javascript">JavaScript</option>
+          </select>
+        </div>
+        <textarea
+          value={markForm.code}
+          onChange={(e) => setMarkForm({ ...markForm, code: e.target.value })}
+          rows={5}
+          placeholder="Paste your accepted solution (optional, but needed for the GitHub commit)…"
+          className="mt-3 w-full rounded-xl border border-var(--card-border) bg-var(--bg-tertiary) px-4 py-3 font-mono text-xs text-var(--text-primary) outline-none placeholder:text-var(--text-muted)"
+        />
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button
+            onClick={onMark}
+            disabled={markBusy}
+            className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/25 disabled:opacity-50"
+          >
+            {markBusy ? "Marking…" : "Mark as Solved"}
+          </button>
+          {markMsg && <p className="text-xs font-semibold text-var(--text-secondary)">{markMsg}</p>}
+        </div>
+        {lcStatus && lcStatus.recent && lcStatus.recent.length > 0 && (
+          <div className="mt-4 space-y-2">
+            {lcStatus.recent.slice(0, 5).map((s) => (
+              <a
+                key={s.slug}
+                href={leetcodeUrl(s.slug)}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-between gap-3 rounded-xl border border-var(--card-border) bg-var(--card-bg) px-4 py-2.5 text-sm transition hover:border-amber-400/40"
+              >
+                <span className="truncate font-semibold text-var(--text-primary)">
+                  {s.title} {s.githubPath && <GitBranch size={13} className="ml-1 inline text-emerald-400" />}
+                </span>
+                <span className="shrink-0 text-[11px] font-bold text-amber-300">{s.difficulty}</span>
+              </a>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <LeetCodeLinkCard
+        initialUsername={(lcStatus && lcStatus.leetcodeUsername) || ""}
+        onChanged={onLinked}
+      />
+      <GitHubOAuthCard onChanged={onLinked} />
+      {lcStatus && lcStatus.lastSyncedAt && (
+        <p className="text-[11px] text-var(--text-muted)">
+          Last LeetCode sync: {new Date(lcStatus.lastSyncedAt).toLocaleString()}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function LeetCodeLinkCard({ initialUsername, onChanged }) {
+  const [username, setUsername] = useState(initialUsername || "");
+  const [busy, setBusy] = useState("");
+  const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setUsername(initialUsername || "");
+  }, [initialUsername]);
+
+  const link = async () => {
+    const name = username.trim().replace(/^@/, "");
+    if (!name) return setMsg("Enter your LeetCode username first.");
+    setBusy("link");
+    setMsg("");
+    try {
+      const res = await codingTrackService.updateLink({ leetcodeUsername: name });
+      setMsg(res.message);
+      if (onChanged) onChanged();
+    } catch (e) {
+      setMsg(e.message || "Could not link that LeetCode username.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const verify = async () => {
+    setBusy("verify");
+    setMsg("");
+    try {
+      const res = await codingTrackService.verify();
+      setMsg(res.message);
+      if (onChanged) onChanged();
+    } catch (e) {
+      setMsg(e.message || "Auto-check failed — use Mark as Solved below.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  return (
+    <section className="rounded-2xl border border-var(--card-border) bg-var(--card-bg) p-6">
+      <h3 className="font-bold text-var(--text-primary)">LeetCode account</h3>
+      <p className="mt-1 text-xs text-var(--text-muted)">
+        Link your public username so MOYU can auto-check your Accepted submissions. We never ask for your
+        LeetCode password or session cookie.
+      </p>
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+        <input
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="LeetCode username (e.g. neal_wu)"
+          className="min-w-0 flex-1 rounded-xl border border-var(--card-border) bg-var(--bg-tertiary) px-4 py-2.5 text-sm text-var(--text-primary) outline-none placeholder:text-var(--text-muted)"
+        />
+        <button
+          onClick={link}
+          disabled={busy === "link"}
+          className="shrink-0 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50"
+        >
+          {busy === "link" ? "Linking…" : "Link LeetCode"}
+        </button>
+        <button
+          onClick={verify}
+          disabled={busy === "verify"}
+          className="shrink-0 rounded-xl border border-var(--card-border) px-5 py-2.5 text-xs font-bold text-var(--text-secondary) transition hover:border-brand-400/40 disabled:opacity-50"
+        >
+          {busy === "verify" ? "Checking…" : "Check my LeetCode"}
+        </button>
+      </div>
+      {msg && <p className="mt-3 text-xs font-semibold text-var(--text-secondary)">{msg}</p>}
+    </section>
+  );
+}
+
+function GitHubOAuthCard({ onChanged }) {
+  const [status, setStatus] = useState(null);
+  const [repo, setRepo] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const load = () => {
+    codingTrackService
+      .githubStatus()
+      .then((res) => res.success && setStatus(res.data))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("github_code");
+    if (!code) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setBusy(true);
+    codingTrackService
+      .githubCallback(code)
+      .then((res) => {
+        setMsg(res.message);
+        params.delete("github_code");
+        window.history.replaceState({}, "", window.location.pathname);
+        load();
+        if (onChanged) onChanged();
+      })
+      .catch((e) => setMsg(e.message || "GitHub connect failed."))
+      .finally(() => setBusy(false));
+  }, [onChanged]);
+
+  const connect = async () => {
+    setBusy(true);
+    setMsg("");
+    try {
+      const res = await codingTrackService.githubAuthUrl();
+      window.location.href = res.data.url;
+    } catch (e) {
+      setMsg(e.message || "GitHub OAuth is not configured yet.");
+      setBusy(false);
+    }
+  };
+
+  const saveRepo = async () => {
+    if (!repo.trim()) return setMsg("Enter owner/repo first.");
+    setBusy(true);
+    try {
+      const res = await codingTrackService.githubSelectRepo(repo.trim());
+      setMsg(res.message);
+      load();
+    } catch (e) {
+      setMsg(e.message || "Could not select repo.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="rounded-2xl border border-var(--card-border) bg-var(--card-bg) p-6">
+      <h3 className="font-bold text-var(--text-primary)">GitHub (OAuth, separate from progress)</h3>
+      <p className="mt-1 text-xs text-var(--text-muted)">
+        Connecting GitHub never marks problems complete — it only syncs solution files to your repo as your commits.
+        No passwords; token stored encrypted server-side.
+      </p>
+      {status && status.connected ? (
+        <div className="mt-4 space-y-2 text-sm">
+          <p className="font-semibold text-emerald-400">Connected as @{status.githubUsername}</p>
+          <p className="text-xs text-var(--text-muted)">Repo: {status.repoFullName || "not selected yet"}</p>
+          <div className="flex gap-2">
+            <input
+              value={repo}
+              onChange={(e) => setRepo(e.target.value)}
+              placeholder="owner/moyu-leetcode-solutions"
+              className="min-w-0 flex-1 rounded-xl border border-var(--card-border) bg-var(--bg-tertiary) px-4 py-2.5 text-sm text-var(--text-primary) outline-none placeholder:text-var(--text-muted)"
+            />
+            <button
+              onClick={saveRepo}
+              disabled={busy}
+              className="shrink-0 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50"
+            >
+              Save repo
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={connect}
+          disabled={busy}
+          className="mt-4 rounded-xl bg-gradient-to-r from-slate-600 to-slate-900 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+        >
+          {busy ? "Working…" : "Connect with GitHub"}
+        </button>
+      )}
+      {msg && <p className="mt-3 text-xs font-semibold text-var(--text-secondary)">{msg}</p>}
+    </section>
   );
 }
 

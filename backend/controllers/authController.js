@@ -29,6 +29,11 @@ const publicUser = (user) => ({
   skills: user.skills,
   github: user.github,
   linkedin: user.linkedin,
+  leetcodeUsername: user.leetcodeUsername,
+  timezone: user.timezone,
+  githubUsername: user.githubUsername,
+  githubRepo: user.githubRepo,
+  leetcodeStats: user.leetcodeStats,
   targetRoles: user.targetRoles,
   streak: user.streak,
   onboarded: user.onboarded,
@@ -197,6 +202,7 @@ const updateMe = async (req, res) => {
     const allowedFields = [
       "name", "college", "department", "year", "phone", "city", "bio", "avatar",
       "skills", "github", "linkedin", "targetRoles", "onboarded",
+      "leetcodeUsername", "timezone", "githubUsername", "githubRepo",
     ];
 
     const updates = {};

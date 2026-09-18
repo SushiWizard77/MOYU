@@ -171,7 +171,7 @@ function Home() {
       <footer className="relative z-10 border-t border-brand-100 bg-white px-6 py-10">
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-6 sm:flex-row sm:items-center">
           <div className="flex items-center gap-4"><Logo size={40} dark /><p className="text-sm font-medium text-brand-800/70">Learn. Practice. Get Placed.</p></div>
-          <p className="text-sm font-medium text-brand-800/60">© 2026 MOYU · Reach for the stars.</p>
+          <p className="text-sm font-medium text-brand-800/60">© 2026 MOYU · More You Need To Know.</p>
         </div>
       </footer>
     </div>

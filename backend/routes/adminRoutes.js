@@ -16,6 +16,13 @@ const {
   deletePracticeQuestion,
   broadcastNotification,
 } = require("../controllers/adminController");
+const {
+  listChallenges,
+  createChallenge,
+  updateChallenge,
+  deleteChallenge,
+  studentCodingProgress,
+} = require("../controllers/codingAdminController");
 
 const router = express.Router();
 
@@ -39,5 +46,11 @@ router.patch("/practice-questions/:id", updatePracticeQuestion);
 router.delete("/practice-questions/:id", deletePracticeQuestion);
 
 router.post("/notifications/broadcast", broadcastNotification);
+
+router.get("/coding-challenges", listChallenges);
+router.post("/coding-challenges", createChallenge);
+router.patch("/coding-challenges/:id", updateChallenge);
+router.delete("/coding-challenges/:id", deleteChallenge);
+router.get("/students/:id/coding", studentCodingProgress);
 
 module.exports = router;
