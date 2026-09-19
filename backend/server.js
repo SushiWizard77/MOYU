@@ -36,8 +36,6 @@ app.use(
 
 app.use(express.json());
 
-connectDB();
-
 app.get("/", (req, res) => {
   res.json({
     success: true,
@@ -48,6 +46,21 @@ app.get("/", (req, res) => {
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "OK", service: "MOYU Backend" });
+});
+
+// Every /api/v1 route below touches MongoDB, so fail fast with a clear message
+// instead of letting each query time out with an opaque 500.
+app.use("/api/v1", async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch {
+    res.status(503).json({
+      success: false,
+      message:
+        "The database is unavailable right now. Check that MONGO_URI is correct and that this machine's IP is allowed in your MongoDB Atlas network access list.",
+    });
+  }
 });
 
 app.use("/api/v1/auth", authRoutes);

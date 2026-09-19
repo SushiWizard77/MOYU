@@ -1,6 +1,7 @@
 import { ArrowLeft, Eye, EyeOff, GraduationCap, Lock, Mail, Rocket, ShieldCheck, Sparkles, User } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import GoogleSignInButton from "../components/GoogleSignInButton";
 import Logo from "../components/Logo";
 import Starfield from "../components/Starfield";
 import { useAuth } from "../hooks/useAuth";
@@ -14,7 +15,28 @@ function Register() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register, googleLogin } = useAuth();
+
+  const handleGoogleCredential = useCallback(
+    async (credential) => {
+      setError("");
+      setSuccess("");
+      setLoading(true);
+      try {
+        const res = await googleLogin(credential);
+        if (res.success) {
+          navigate("/dashboard");
+        } else {
+          setError(res.message || "Google sign-up failed. Please try again.");
+        }
+      } catch (err) {
+        setError(err.message || "Google sign-up failed. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [googleLogin, navigate]
+  );
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -94,6 +116,15 @@ function Register() {
                   <Rocket size={17} />{loading ? "Creating..." : "Create account"}
                 </button>
               </form>
+              <div className="mt-6 relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-brand-200" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase tracking-[0.1em] text-brand-500 bg-white px-2">
+                  Or sign up with
+                </div>
+              </div>
+              <GoogleSignInButton onCredential={handleGoogleCredential} onError={setError} disabled={loading} />
               <div className="mt-6 flex items-center justify-center gap-2 text-xs font-semibold text-brand-800/60">
                 <GraduationCap size={15} className="text-brand-600" /> Built for college students
               </div>

@@ -2,6 +2,14 @@ const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/ApiError");
 const jwt = require("jsonwebtoken");
+const { createPublicKey } = require("crypto");
+
+const GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs";
+const GOOGLE_ISSUERS = ["accounts.google.com", "https://accounts.google.com"];
+
+// Google rotates its signing keys, so cache them and honour the max-age that
+// Google sends instead of fetching the key set on every sign-in.
+let googleKeysCache = { keys: new Map(), expiresAt: 0 };
 
 const signToken = (user) =>
   jwt.sign(
@@ -23,28 +31,65 @@ const publicUser = (user) => ({
   createdAt: user.createdAt,
 });
 
+// Fetch Google's public signing key for a token's `kid`, caching the key set.
+async function getGoogleSigningKey(kid) {
+  if (Date.now() < googleKeysCache.expiresAt && googleKeysCache.keys.has(kid)) {
+    return googleKeysCache.keys.get(kid);
+  }
+
+  const response = await fetch(GOOGLE_JWKS_URL);
+  if (!response.ok) {
+    throw new ApiError(502, "Google sign-in is temporarily unavailable. Please try again.");
+  }
+
+  const maxAge = Number(/max-age=(\d+)/.exec(response.headers.get("cache-control") || "")?.[1]) || 3600;
+  const body = await response.json();
+  const keys = new Map();
+
+  for (const jwk of body.keys || []) {
+    if (jwk.kty !== "RSA" || !jwk.kid) continue;
+    try {
+      keys.set(jwk.kid, createPublicKey({ key: jwk, format: "jwk" }).export({ type: "spki", format: "pem" }));
+    } catch {
+      // Skip keys that cannot be converted; another entry may match the kid.
+    }
+  }
+
+  googleKeysCache = { keys, expiresAt: Date.now() + maxAge * 1000 };
+  return googleKeysCache.keys.get(kid) || null;
+}
+
 // Verify a Google ID token (from Google Identity Services on the frontend)
-// against Google's tokeninfo endpoint. Returns the token payload or throws.
+// against Google's published public keys, checking signature, expiry, issuer
+// and audience. Returns the token payload or throws.
 async function verifyGoogleIdToken(idToken) {
   if (!idToken) throw new ApiError(400, "Google ID token is required");
 
-  const response = await fetch(
-    `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`
-  );
-  if (!response.ok) {
-    throw new ApiError(401, "Google sign-in failed: the token is invalid or has expired");
-  }
-
-  const payload = await response.json();
-
-  // The tokeninfo endpoint only returns data for tokens signed by Google,
-  // and it enforces expiry. We additionally check the intended audience.
   const expectedAud = process.env.GOOGLE_CLIENT_ID;
   if (!expectedAud) {
     throw new ApiError(500, "Google sign-in is not configured on the server");
   }
-  if (payload.aud !== expectedAud) {
-    throw new ApiError(401, "Google sign-in failed: token was issued to a different app");
+
+  const decoded = jwt.decode(idToken, { complete: true });
+  const kid = decoded?.header?.kid;
+  if (!kid) {
+    throw new ApiError(401, "Google sign-in failed: the token is invalid or has expired");
+  }
+
+  const publicKey = await getGoogleSigningKey(kid);
+  if (!publicKey) {
+    throw new ApiError(401, "Google sign-in failed: the token was signed with an unknown key");
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(idToken, publicKey, {
+      algorithms: ["RS256"],
+      audience: expectedAud,
+      issuer: GOOGLE_ISSUERS,
+    });
+  } catch {
+    throw new ApiError(401, "Google sign-in failed: the token is invalid or has expired");
   }
 
   if (!payload.email || !(payload.email_verified === "true" || payload.email_verified === true)) {

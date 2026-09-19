@@ -16,12 +16,10 @@ const connectDB = async () => {
     console.error("❌ MongoDB connection failed:");
     console.error(error.message);
 
-    // On Vercel (serverless) never kill the process — just throw
-    // so the request handler can return a 500 instead.
-    if (process.env.VERCEL) {
-      throw error;
-    }
-    process.exit(1);
+    // Never kill the process: a transient database outage should fail individual
+    // requests with a 500, not take the whole API down. `isConnected` stays false,
+    // so the next request (or cold start) retries the connection.
+    throw error;
   }
 };
 
